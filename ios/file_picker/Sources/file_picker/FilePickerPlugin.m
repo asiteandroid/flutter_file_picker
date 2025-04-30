@@ -575,7 +575,19 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
                             NSString *filename = [NSString stringWithFormat: url.lastPathComponent,
                             url.pathExtension.length > 0 ? url.pathExtension : @"jpg"];
                             
-                            NSString *destinationPath = [imagesDir stringByAppendingPathComponent:filename];
+                            NSString *timestampString = [NSString stringWithFormat:@"%.0f",[[NSDate date] timeIntervalSince1970]];
+                           
+                            NSString *imageTimePath = [imagesDir stringByAppendingPathComponent: timestampString];
+                            
+                            if (![fileManager fileExistsAtPath:imageTimePath]) {
+                                NSError *dirError;
+                                [fileManager createDirectoryAtPath:imageTimePath withIntermediateDirectories:YES attributes:nil error:&dirError];
+                                if (dirError) {
+                                    Log(@"Failed to create image directory: %@", dirError);
+                                }
+                            }
+                            
+                            NSString *destinationPath = [imageTimePath stringByAppendingPathComponent:filename];
                             NSURL *destinationUrl = [NSURL fileURLWithPath:destinationPath];
                             
                             // Load image data with options to reduce memory usage
