@@ -1,5 +1,5 @@
 #import "FilePickerPlugin.h"
-#import "FileUtils.h"
+#import "FilePickerUtils.h"
 #import "ImageUtils.h"
 #import <Flutter/Flutter.h>
 
@@ -85,14 +85,13 @@
         result([FlutterError errorWithCode:@"multiple_request"
                                    message:@"Cancelled by a second request"
                                    details:nil]);
-        _result = nil;
         return;
     }
     
     _result = result;
     
     if([call.method isEqualToString:@"clear"]) {
-        _result([NSNumber numberWithBool: [FileUtils clearTemporaryFiles]]);
+        _result([NSNumber numberWithBool: [FilePickerUtils clearTemporaryFiles]]);
         _result = nil;
         return;
     }
@@ -121,7 +120,7 @@
     self.loadDataToMemory = ((NSNumber*)[arguments valueForKey:@"withData"]).boolValue;
     
     if([call.method isEqualToString:@"any"] || [call.method containsString:@"custom"]) {
-        self.allowedExtensions = [FileUtils resolveType:call.method withAllowedExtensions: [arguments valueForKey:@"allowedExtensions"]];
+        self.allowedExtensions = [FilePickerUtils resolveType:call.method withAllowedExtensions: [arguments valueForKey:@"allowedExtensions"]];
         if(self.allowedExtensions == nil) {
             _result([FlutterError errorWithCode:@"Unsupported file extension"
                                         message:@"If you are providing extension filters make sure that you are only using FileType.custom and the extension are provided without the dot, (ie., jpg instead of .jpg). This could also have happened because you are using an unsupported file extension. If the problem persists, you may want to consider using FileType.any instead."
@@ -138,7 +137,7 @@
         }
     } else if([call.method isEqualToString:@"video"] || [call.method isEqualToString:@"image"] || [call.method isEqualToString:@"media"]) {
 #ifdef PICKER_MEDIA
-        [self resolvePickMedia:[FileUtils resolveMediaType:call.method] withMultiPick:isMultiplePick withCompressionAllowed:self.allowCompression];
+        [self resolvePickMedia:[FilePickerUtils resolveMediaType:call.method] withMultiPick:isMultiplePick withCompressionAllowed:self.allowCompression];
 #else
         _result([FlutterError errorWithCode:@"Unsupported picker type"
                                     message:@"Support for the Media picker is not compiled in. Remove the Pod::PICKER_MEDIA=false statement from your Podfile."
@@ -387,7 +386,7 @@
 
 
 - (void) handleResult:(id) files {
-    _result([FileUtils resolveFileInfo: [files isKindOfClass: [NSArray class]] ? files : @[files] withData:self.loadDataToMemory]);
+    _result([FilePickerUtils resolveFileInfo: [files isKindOfClass: [NSArray class]] ? files : @[files] withData:self.loadDataToMemory]);
     _result = nil;
 }
 
@@ -566,7 +565,7 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
                [result.itemProvider loadFileRepresentationForTypeIdentifier:typeIdentifier completionHandler:^(NSURL * _Nullable url, NSError * _Nullable error) {
                     @autoreleasepool {
                         if (error != nil || url == nil) {
-                            [errors addObject:[NSString stringWithFormat:@"Failed to load image at index %ld: %@",
+                            [errors addObject:[NSString stringWithFormat:@"Failed to load image/video at index %ld: %@",
                                 (long)index, error ? error.localizedDescription : @"Unknown error"]];
                             dispatch_group_leave(self->_group);
                             return;
@@ -594,26 +593,17 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
                             
                             // Load image data with options to reduce memory usage
                             NSError *loadError = nil;
-                            NSData *imageData = [NSData dataWithContentsOfURL:url options:NSDataReadingMappedIfSafe error:&loadError];
                             
-                            if (loadError || !imageData) {
-                                [errors addObject:[NSString stringWithFormat:@"Failed to load image data at index %ld: %@",
-                                    (long)index, loadError.localizedDescription ?: @"Unknown error"]];
+                            // Write to destination
+                            if ([[NSFileManager defaultManager] copyItemAtURL:url toURL:destinationUrl error:&loadError]) {
+                                [urls addObject:destinationUrl];
                             } else {
-                                // Write to destination
-                                if ([imageData writeToURL:destinationUrl options:NSDataWritingAtomic error:&loadError]) {
-                                    [urls addObject:destinationUrl];
-                                } else {
-                                    [errors addObject:[NSString stringWithFormat:@"Failed to save image at index %ld: %@",
-                                        (long)index, loadError.localizedDescription]];
-                                }
+                                [errors addObject:[NSString stringWithFormat:@"Failed to save image/video at index %ld: %@",
+                                    (long)index, loadError.localizedDescription]];
                             }
                             
-                            // Clean up
-                            imageData = nil;
-                            
                         } @catch (NSException *exception) {
-                            [errors addObject:[NSString stringWithFormat:@"Exception processing image at index %ld: %@",
+                            [errors addObject:[NSString stringWithFormat:@"Exception processing image/video at index %ld: %@",
                                 (long)index, exception.description]];
                         }
                         
@@ -653,7 +643,7 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
         } else {
             // Only if all images failed, return an error
             self->_result([FlutterError errorWithCode:@"file_picker_error"
-                                            message:@"Failed to process any images"
+                                            message:@"Failed to process any images/video"
                                             details:[errors componentsJoinedByString:@"\n"]]);
         }
         self->_result = nil;
@@ -681,7 +671,7 @@ didPickDocumentsAtURLs:(NSArray<NSURL *> *)urls{
     NSMutableArray<NSURL *> * urls = [[NSMutableArray alloc] initWithCapacity:numberOfItems];
     
     for(MPMediaItemCollection * item in [mediaItemCollection items]) {
-        NSURL * cachedAsset = [FileUtils exportMusicAsset: [item valueForKey:MPMediaItemPropertyAssetURL] withName: [item valueForKey:MPMediaItemPropertyTitle]];
+        NSURL * cachedAsset = [FilePickerUtils exportMusicAsset: [item valueForKey:MPMediaItemPropertyAssetURL] withName: [item valueForKey:MPMediaItemPropertyTitle]];
         [urls addObject: cachedAsset];
     }
     

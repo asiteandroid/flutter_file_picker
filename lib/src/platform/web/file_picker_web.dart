@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/src/api/file_picker_types.dart';
+import 'package:file_picker/src/api/file_picker_result.dart';
+import 'package:file_picker/src/api/platform_file.dart';
+import 'package:file_picker/src/platform/file_picker_platform_interface.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:path/path.dart' as p;
 import 'package:web/web.dart';
 
-class FilePickerWeb extends FilePicker {
+class FilePickerWeb extends FilePickerPlatform {
   late Element _target;
   final String _kFilePickerInputsDomId = '__file_picker_web-file-input';
 
@@ -18,7 +21,7 @@ class FilePickerWeb extends FilePicker {
   }
 
   static void registerWith(Registrar registrar) {
-    FilePicker.platform = FilePickerWeb._();
+    FilePickerPlatform.instance = FilePickerWeb._();
   }
 
   /// Initializes a DOM container where we can host input elements.
@@ -43,13 +46,11 @@ class FilePickerWeb extends FilePicker {
     List<String>? allowedExtensions,
     bool allowMultiple = false,
     Function(FilePickerStatus)? onFileLoading,
-    @Deprecated(
-        'allowCompression is deprecated and has no effect. Use compressionQuality instead.')
-    bool allowCompression = false,
     bool withData = true,
     bool withReadStream = false,
     bool lockParentWindow = false,
     bool readSequential = false,
+    bool cancelUploadOnWindowBlur = true,
     int compressionQuality = 0,
   }) async {
     if (type != FileType.custom && (allowedExtensions?.isNotEmpty ?? false)) {
@@ -57,7 +58,7 @@ class FilePickerWeb extends FilePicker {
           'You are setting a type [$type]. Custom extension filters are only allowed with FileType.custom, please change it or remove filters.');
     }
 
-    final Completer<List<PlatformFile>?> filesCompleter =
+    Completer<List<PlatformFile>?>? filesCompleter =
         Completer<List<PlatformFile>?>();
 
     String accept = _fileType(type, allowedExtensions);
@@ -108,7 +109,7 @@ class FilePickerWeb extends FilePicker {
           if (onFileLoading != null) {
             onFileLoading(FilePickerStatus.done);
           }
-          filesCompleter.complete(pickedFiles);
+          filesCompleter?.complete(pickedFiles);
         }
       }
 
@@ -156,7 +157,7 @@ class FilePickerWeb extends FilePicker {
       Future.delayed(Duration(seconds: 1)).then((value) {
         if (!changeEventTriggered) {
           changeEventTriggered = true;
-          filesCompleter.complete(null);
+          filesCompleter?.complete(null);
         }
       });
     }
@@ -165,8 +166,10 @@ class FilePickerWeb extends FilePicker {
     uploadInput.addEventListener('change', changeEventListener.toJS);
     uploadInput.addEventListener('cancel', cancelledEventListener.toJS);
 
-    // Listen focus event for cancelled
-    window.addEventListener('focus', cancelledEventListener.toJS);
+    if (cancelUploadOnWindowBlur) {
+      // Listen focus event for cancelled
+      window.addEventListener('focus', cancelledEventListener.toJS);
+    }
 
     //Add input element to the page body
     Node? firstChild = _target.firstChild;
@@ -184,6 +187,7 @@ class FilePickerWeb extends FilePicker {
     }
 
     final List<PlatformFile>? files = await filesCompleter.future;
+    filesCompleter = null;
 
     return files == null ? null : FilePickerResult(files);
   }

@@ -1,3 +1,127 @@
+## 11.0.0
+### General
+- **BREAKING CHANGE**: Refactored `FilePicker` class to use `static` methods instead of an instance-based approach. Users should now call `FilePicker.pickFiles()`, `FilePicker.getDirectoryPath()`, and `FilePicker.saveFile()` directly.
+- Added `cancelUploadOnWindowBlur` to the public `pickFiles` API (Web only). [#1961](https://github.com/miguelpruivo/flutter_file_picker/issues/1961)
+- Reordered and cleaned up exports in `file_picker.dart`.
+
+### Web
+- Added WASM support for the web file picker. [#1950](https://github.com/miguelpruivo/flutter_file_picker/pull/1950)
+
+### Android
+- Fixed an issue where file type selection (`audio`, `video`, `media`) was not being considered correctly on Android. [#1959](https://github.com/miguelpruivo/flutter_file_picker/pull/1959)
+- Updated Android example app to use Flutter-managed SDK versions (Gradle 8+, Kotlin, targetSdk 36).
+
+## 10.3.10
+#### General
+- Reverted breaking changes accidentally introduced in 10.3.9 to maintain Semantic Versioning compliance.
+#### Android
+- Updated Tika library to resolve vulnerability CVE-2025-66516 and CVE-2025-54988 (Critical XXE vulnerability).
+
+## 10.3.9
+#### Android
+- Updated Apache Tika to 3.2.3 to address CVE-2025-66516 and CVE-2025-54988 (Critical XXE vulnerability).
+- Support Gradle 9
+
+## 10.3.8
+### iOS
+- Rename FileUtils to FilePickerUtils [#1921](https://github.com/miguelpruivo/flutter_file_picker/issues/1921)
+### Android
+- Restores the ms[df] URI handling logic in FileUtils.kt to fix file selection returning null on some devices.
+
+## 10.3.7
+### Android
+- Fixed an issue where file type filtering was not being applied correctly, now only displaying files that match the selected MIME types. [#1906](https://github.com/miguelpruivo/flutter_file_picker/pull/1906)
+
+## 10.3.6
+### Android
+- Added support for 16 KB page sizes. [#1888](https://github.com/miguelpruivo/flutter_file_picker/issues/1888)
+
+## 10.3.5
+### iOS
+- Fixed an error when loading large files (>= 2GB~).
+
+## 10.3.4
+### Android
+- Detect HEIC and HEIF extensions as valid image
+- Use compression format based file extension when compressing images.
+
+## 10.3.3
+### Android
+- Updated compileSdk to use flutter.compileSdkVersion. [#1842](https://github.com/miguelpruivo/flutter_file_picker/issues/1842)
+
+### Linux
+- Fixed an issue where initialDirectory was not working. [#1878](https://github.com/miguelpruivo/flutter_file_picker/issues/1878)
+
+## 10.3.2
+### Linux
+- Fixed an issue filtering files by extension on Linux. [#1870](https://github.com/miguelpruivo/flutter_file_picker/pull/1870) [@Decodetalkers](https://github.com/Decodetalkers)
+
+## 10.3.1
+### General
+- Fixed onFileLoading handler to process status changes only when data is a bool.
+
+## 10.3.0
+### Desktop
+- Support xdg desktop portal filechooser on linux. [#1827](https://github.com/miguelpruivo/flutter_file_picker/issues/1827) [@Decodetalkers](https://github.com/Decodetalkers)
+
+### Android
+- Fixed an issue where CSV files were not properly filtered during file selection. [#1849](https://github.com/miguelpruivo/flutter_file_picker/pull/1849) [@SoftWyer](https://github.com/SoftWyer)
+
+### Web
+- Introduced bool flag to control upload behavior on window blur. [#1833](https://github.com/miguelpruivo/flutter_file_picker/issues/1833) [@mugglmenzel](https://github.com/mugglmenzel)
+
+## 10.2.4
+### Android
+- Fixed an issue where custom MIME types were failing to load picking files on Chromebook. [#1858](https://github.com/miguelpruivo/flutter_file_picker/issues/1858) [@vicajilau](https://github.com/vicajilau)
+
+## 10.2.3
+### General
+- Fixed build failures on Flutter 3.24 caused by changes to address Win32 deprecation warnings on Windows. [#1855](https://github.com/miguelpruivo/flutter_file_picker/issues/1855) [@vicajilau](https://github.com/vicajilau)
+
+## 10.2.2
+### Android
+- Fixed an issue where some files would incorrectly append a `.txt` extension when saving files on Android. [@vicajilau](https://github.com/vicajilau)
+
+## 10.2.1
+### Android
+- Fixed an issue where the image upload would not display the loading indicator.
+
+## 10.2.0
+### Desktop
+- Added support for webp images on Desktop platforms. [#1491](https://github.com/miguelpruivo/flutter_file_picker/issues/1491)
+### Android
+- Fixed an issue where saving files was failing with some MimeTypes [#1789](https://github.com/miguelpruivo/flutter_file_picker/issues/1789), [#1818](https://github.com/miguelpruivo/flutter_file_picker/issues/1818), [#1819](https://github.com/miguelpruivo/flutter_file_picker/issues/1819) and [#1820](https://github.com/miguelpruivo/flutter_file_picker/issues/1820)
+
+## 10.1.9
+### Android
+- Fixed an issue when a folder is selected on an external storage [#1801](https://github.com/miguelpruivo/flutter_file_picker/issues/1801)
+
+## 10.1.8
+### Android
+- Fixed an issue when a folder is selected [#1802](https://github.com/miguelpruivo/flutter_file_picker/issues/1802)
+
+## 10.1.7
+### Web
+- Fixed a memory leak on the web.
+
+## 10.1.6
+### Android
+- Fixed an issue when you try to select more than one file[#1796](https://github.com/miguelpruivo/flutter_file_picker/issues/1796)
+- Fixed the app not filter correctly for the selected file types [#1792](https://github.com/miguelpruivo/flutter_file_picker/issues/1792)
+
+## 10.1.5
+### iOS
+- Fixed an app crash when calling `.saveFile` twice and cancelling the native save operation via the UI [#1626](https://github.com/miguelpruivo/flutter_file_picker/issues/1626) [@Leapward-Koex](https://github.com/Leapward-Koex)
+- Fixed a `.saveFile` future never completing when `.saveFile` is called twice without waiting for the first completion. [@Leapward-Koex](https://github.com/Leapward-Koex)
+
+## 10.1.4
+### Android
+- Fixed an issue where paths were loaded with duplicated endings. [#1767](https://github.com/miguelpruivo/flutter_file_picker/pull/1767)
+
+## 10.1.3
+### Android
+- Fixed an issue loading files. [#1777](https://github.com/miguelpruivo/flutter_file_picker/pull/1777)
+
 ## 10.1.2
 ### Android
 - Improved mimetype detection. [@vicajilau](https://github.com/vicajilau)

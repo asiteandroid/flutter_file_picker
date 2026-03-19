@@ -39,7 +39,7 @@ class FilePickerPlugin : MethodCallHandler, FlutterPlugin,
                 "audio" -> "audio/*"
                 "image" -> "image/*"
                 "video" -> "video/*"
-                "media" -> "image/*,video/*"
+                "media" -> "media"
                 "any", "custom" -> "*/*"
                 "dir" -> "dir"
                 else -> null
@@ -146,22 +146,14 @@ class FilePickerPlugin : MethodCallHandler, FlutterPlugin,
             "custom" -> {
                 val allowedExtensions =
                     getMimeTypes(arguments?.get("allowedExtensions") as ArrayList<String>?)
-                if (allowedExtensions.isNullOrEmpty()) {
-                    result.error(
-                        TAG,
-                        "Unsupported filter. Ensure using extension without dot (e.g., jpg, not .jpg).",
-                        null
-                    )
-                } else {
-                    delegate?.startFileExplorer(
-                        resolveType(method),
-                        arguments?.get("allowMultipleSelection") as Boolean?,
-                        arguments?.get("withData") as Boolean?,
-                        allowedExtensions,
-                        arguments?.get("compressionQuality") as Int?,
-                        result
-                    )
-                }
+                delegate?.startFileExplorer(
+                    resolveType(method),
+                    arguments?.get("allowMultipleSelection") as Boolean?,
+                    arguments?.get("withData") as Boolean?,
+                    allowedExtensions,
+                    arguments?.get("compressionQuality") as Int?,
+                    result
+                )
             }
 
             else -> {
@@ -197,11 +189,11 @@ class FilePickerPlugin : MethodCallHandler, FlutterPlugin,
         delegate?.let { it ->
             EventChannel(messenger, EVENT_CHANNEL).setStreamHandler(object :
                 EventChannel.StreamHandler {
-                override fun onListen(arguments: Any, events: EventSink) {
+                override fun onListen(arguments: Any?, events: EventSink?) {
                     it.setEventHandler(events)
                 }
 
-                override fun onCancel(arguments: Any) {
+                override fun onCancel(arguments: Any?) {
                     it.setEventHandler(null)
                 }
             })

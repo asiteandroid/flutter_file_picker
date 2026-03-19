@@ -1,8 +1,8 @@
 @TestOn('mac-os')
 library;
 
-import 'package:file_picker/src/file_picker.dart';
-import 'package:file_picker/src/file_picker_macos.dart';
+import 'package:file_picker/src/platform/macos/file_picker_macos.dart';
+import 'package:file_picker/src/api/file_picker_types.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -22,7 +22,7 @@ void main() {
 
       expect(
         picker.fileTypeToFileFilter(FileType.image, null),
-        equals(["bmp", "gif", "jpeg", "jpg", "png"]),
+        equals(["bmp", "gif", "jpeg", "jpg", "png", "webp"]),
       );
 
       expect(

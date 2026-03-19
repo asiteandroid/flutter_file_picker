@@ -1,20 +1,25 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:file_picker/src/exceptions.dart';
-import 'package:file_picker/src/utils.dart';
-import 'package:file_picker/src/windows/file_picker_windows_ffi_types.dart';
+import 'package:file_picker/src/api/file_picker_types.dart';
+import 'package:file_picker/src/api/file_picker_result.dart';
+
+import 'package:file_picker/src/api/exceptions.dart';
+import 'package:file_picker/src/platform/file_picker_platform_interface.dart';
+import 'package:file_picker/src/file_picker_utils.dart';
+import 'package:file_picker/src/platform/windows/file_picker_windows_ffi_types.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:win32/win32.dart';
 
-class FilePickerWindows extends FilePicker {
+class FilePickerWindows extends FilePickerPlatform {
   static void registerWith() {
-    FilePicker.platform = FilePickerWindows();
+    FilePickerPlatform.instance = FilePickerWindows();
   }
 
   @override
@@ -24,15 +29,13 @@ class FilePickerWindows extends FilePicker {
     FileType type = FileType.any,
     List<String>? allowedExtensions,
     Function(FilePickerStatus)? onFileLoading,
-    @Deprecated(
-        'allowCompression is deprecated and has no effect. Use compressionQuality instead.')
-    bool allowCompression = false,
     bool allowMultiple = false,
     bool withData = false,
     bool withReadStream = false,
     bool lockParentWindow = false,
     bool readSequential = false,
     int compressionQuality = 0,
+    bool cancelUploadOnWindowBlur = true,
   }) async {
     final port = ReceivePort();
     await Isolate.spawn(
@@ -43,7 +46,6 @@ class FilePickerWindows extends FilePicker {
         initialDirectory: initialDirectory,
         type: type,
         allowedExtensions: allowedExtensions,
-        allowCompression: allowCompression,
         allowMultiple: allowMultiple,
         lockParentWindow: lockParentWindow,
       ),
@@ -52,7 +54,7 @@ class FilePickerWindows extends FilePicker {
     FilePickerResult? returnValue;
     if (fileNames != null) {
       final filePaths = fileNames;
-      final platformFiles = await filePathsToPlatformFiles(
+      final platformFiles = await FilePickerUtils.filePathsToPlatformFiles(
         filePaths,
         withReadStream,
         withData,
@@ -137,7 +139,7 @@ class FilePickerWindows extends FilePicker {
         free(optionsPointer);
       }
 
-      final title = TEXT(dialogTitle ?? defaultDialogTitle);
+      final title = TEXT(dialogTitle ?? FilePickerUtils.defaultDialogTitle);
       try {
         hr = fileDialog.setTitle(title);
         if (!SUCCEEDED(hr)) throw WindowsException(hr);
@@ -216,7 +218,7 @@ class FilePickerWindows extends FilePicker {
           confirmOverwrite: true,
         ));
     final savedFilePath = (await port.first) as String?;
-    await saveBytesToFile(bytes, savedFilePath);
+    await FilePickerUtils.saveBytesToFile(bytes, savedFilePath);
     return savedFilePath;
   }
 
@@ -253,7 +255,7 @@ class FilePickerWindows extends FilePicker {
       case FileType.custom:
         return 'Files (*.${allowedExtensions!.join(',*.')})\x00*.${allowedExtensions.join(';*.')}\x00\x00';
       case FileType.image:
-        return 'Images (*.bmp,*.gif,*.jpeg,*.jpg,*.png)\x00*.bmp;*.gif;*.jpeg;*.jpg;*.png\x00\x00';
+        return 'Images (*.bmp,*.gif,*.jpeg,*.jpg,*.png,*.webp)\x00*.bmp;*.gif;*.jpeg;*.jpg;*.png;*.webp\x00\x00';
       case FileType.media:
         return 'Videos (*.avi,*.flv,*.mkv,*.mov,*.mp4,*.mpeg,*.webm,*.wmv)\x00*.avi;*.flv;*.mkv;*.mov;*.mp4;*.mpeg;*.webm;*.wmv\x00Images (*.bmp,*.gif,*.jpeg,*.jpg,*.png)\x00*.bmp;*.gif;*.jpeg;*.jpg;*.png\x00\x00';
       case FileType.video:
@@ -261,8 +263,8 @@ class FilePickerWindows extends FilePicker {
     }
   }
 
-  validateFileName(String fileName) {
-    if (fileName.contains(RegExp(r'[<>:\/\\|?*"]'))) {
+  void validateFileName(String fileName) {
+    if (fileName.contains(RegExp(r'[<>:/\\|?*"]'))) {
       throw IllegalCharacterInFileNameException(
           'Reserved characters may not be used in file names. See: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions');
     }
@@ -331,7 +333,8 @@ class FilePickerWindows extends FilePicker {
 
     openFileNameW.ref.lStructSize = sizeOf<OPENFILENAMEW>();
     openFileNameW.ref.lpstrTitle =
-        (args.dialogTitle ?? defaultDialogTitle).toNativeUtf16();
+        (args.dialogTitle ?? FilePickerUtils.defaultDialogTitle)
+            .toNativeUtf16();
     openFileNameW.ref.lpstrFile = calloc.allocate<Utf16>(lpstrFileBufferSize);
     openFileNameW.ref.lpstrFilter =
         fileTypeToFileFilter(args.type, args.allowedExtensions).toNativeUtf16();
@@ -411,7 +414,7 @@ class _OpenSaveFileArgs {
   final String? initialDirectory;
   final FileType type;
   final List<String>? allowedExtensions;
-  final bool allowCompression;
+
   final bool allowMultiple;
   final bool lockParentWindow;
   final bool confirmOverwrite;
@@ -423,7 +426,6 @@ class _OpenSaveFileArgs {
     this.initialDirectory,
     this.type = FileType.any,
     this.allowedExtensions,
-    this.allowCompression = true,
     this.allowMultiple = false,
     this.lockParentWindow = false,
     this.confirmOverwrite = false,
